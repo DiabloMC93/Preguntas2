@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Enfermería y Bioética</title>
+    <!-- Tailwind CSS para estilos rápidos y modernos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Animaciones suaves */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilos personalizados para el modo oscuro */
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            transform: translateX(5px);
+            background-color: #334155; /* Slate 700 */
+        }
+
+        /* Estados de respuesta */
+        .correct {
+            background-color: #059669 !important; /* Emerald 600 */
+            border-color: #34d399 !important;
+            color: white !important;
+        }
+
+        .incorrect {
+            background-color: #dc2626 !important; /* Red 600 */
+            border-color: #f87171 !important;
+            color: white !important;
+        }
+
+        .disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Contenedor Principal -->
+    <div class="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700 fade-in" id="app-container">
+        
+        <!-- Header con Estadísticas -->
+        <div class="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-center gap-2">
+                <i data-lucide="activity" class="text-blue-400"></i>
+                <h1 class="font-bold text-lg text-blue-100 hidden sm:block">Test Bioética</h1>
+            </div>
+            
+            <div class="flex gap-4 text-sm font-mono">
+                <div class="flex items-center gap-1 text-green-400">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    <span id="score-correct">0</span>
+                </div>
+                <div class="flex items-center gap-1 text-red-400">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    <span id="score-incorrect">0</span>
+                </div>
+                <div class="flex items-center gap-1 text-slate-400">
+                    <span>Restantes:</span>
+                    <span id="questions-left">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Progreso -->
+        <div class="w-full bg-slate-900 h-2">
+            <div id="progress-bar" class="bg-blue-500 h-2 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Área de Pregunta -->
+        <div id="quiz-screen" class="p-6 sm:p-8">
+            <div class="mb-6">
+                <span id="question-source" class="text-xs font-bold tracking-wider text-blue-400 uppercase bg-blue-400/10 px-2 py-1 rounded">
+                    Página 3
+                </span>
+                <h2 id="question-text" class="text-xl sm:text-2xl font-semibold mt-4 leading-relaxed text-white">
+                    Cargando pregunta...
+                </h2>
+            </div>
+
+            <!-- Opciones -->
+            <div id="options-container" class="space-y-3">
+                <!-- Los botones se generan con JS -->
+            </div>
+
+            <!-- Mensaje de Feedback (Oculto por defecto) -->
+            <div id="feedback-area" class="mt-6 hidden fade-in">
+                <div id="feedback-message" class="p-4 rounded-lg bg-slate-700 border border-slate-600 text-center font-medium">
+                    <!-- Texto de feedback -->
+                </div>
+                <button onclick="nextQuestion()" class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                    Siguiente Pregunta <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla Final (Oculta por defecto) -->
+        <div id="result-screen" class="hidden p-8 text-center fade-in">
+            <div class="mb-6 inline-block p-4 bg-slate-700 rounded-full">
+                <i data-lucide="trophy" class="w-16 h-16 text-yellow-400"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-white mb-2">¡Test Completado!</h2>
+            <p class="text-slate-400 mb-8">Aquí tienes tu resumen final</p>
+
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                    <p class="text-sm text-slate-400 uppercase">Aciertos</p>
+                    <p id="final-correct" class="text-3xl font-bold text-green-400">0</p>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                    <p class="text-sm text-slate-400 uppercase">Fallos</p>
+                    <p id="final-incorrect" class="text-3xl font-bold text-red-400">0</p>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <p class="text-lg">Nota Final: <span id="final-score" class="font-bold text-blue-400">0</span>/10</p>
+            </div>
+
+            <button onclick="restartQuiz()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors inline-flex items-center gap-2">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i> Repetir Test
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Inicializar iconos
+        lucide.createIcons();
+
+        // Base de datos de preguntas
+        const questionsDB = [
+            // PÁGINA 3
+            {
+                source: "PÁGINA 3",
+                question: "¿En qué están basados los cuidados enfermeros?",
+                options: [
+                    "Conocimientos transculturales aprendidos por la observación de la estructura social.",
+                    "La visión del mundo y los valores.",
+                    "El idioma y los contextos del entorno de diversos grupos culturales.",
+                    "Todas son correctas."
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "PÁGINA 3",
+                question: "¿Qué principio bioético justifica el secreto compartido entre los profesionales sanitarios para mejorar la atención sanitaria?",
+                options: [
+                    "Principio de beneficencia",
+                    "Principio de no maleficencia",
+                    "Principio de autonomía",
+                    "Principio de confidencialidad"
+                ],
+                correct: 0 // A (Beneficencia - justificación clásica para compartir info por el bien del paciente)
+            },
+            // PÁGINA 4
+            {
+                source: "PÁGINA 4",
+                question: "¿Qué marcó un antes y un después en el desarrollo legislativo de los derechos fundamentales de las personas y más concretamente, del derecho a la intimidad?",
+                options: [
+                    "Código penal",
+                    "Constitución Española",
+                    "Ley General de Sanidad",
+                    "Ley de Autonomía del Paciente"
+                ],
+                correct: 1 // B
+            },
+            // PÁGINAS 5 Y 6
+            {
+                source: "PÁGINAS 5 Y 6",
+                question: "Según el artículo 10 de la Ley General de Sanidad, los pacientes tienen derecho a:",
+                options: [
+                    "Un trato preferente frente a otros pacientes.",
+                    "La intimidad, trato digno y confidencialidad de su información clínica.",
+                    "Acceso ilimitado a todos los documentos del hospital.",
+                    "Elegir al profesional sanitario que deseen."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "PÁGINAS 5 Y 6",
+                question: "El artículo 199.1 del Código Penal castiga con prisión de uno a tres años a quien:",
+                options: [
+                    "Use datos personales sin autorización judicial.",
+                    "Revele secretos ajenos conocidos por razón de su oficio o trabajo.",
+                    "No comunique una infracción médica.",
+                    "Publique información anónima sobre salud."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "PÁGINAS 5 Y 6",
+                question: "El secreto profesional enfermero se fundamenta en:",
+                options: [
+                    "El interés de la institución sanitaria.",
+                    "La necesidad de compartir información entre profesionales.",
+                    "La obligación administrativa de conservar documentos.",
+                    "El deber moral y jurídico de proteger la vida privada del paciente."
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "PÁGINAS 5 Y 6",
+                question: "La Ley 41/2002 o Ley de Autonomía del paciente dispone que:",
+                options: [
+                    "Nadie puede acceder a los datos de salud sin autorización legal.",
+                    "El paciente no puede decidir quién accede a sus datos.",
+                    "Los centros no tienen responsabilidad sobre la protección de datos.",
+                    "Los datos sanitarios pueden compartirse entre instituciones libremente."
+                ],
+                correct: 0 // A
+            },
+            // PÁGINA 7
+            {
+                source: "PÁGINA 7",
+                question: "En relación con el concepto de “secreto compartido”, ¿qué principio lo fundamenta y bajo qué condición?",
+                options: [
+                    "Principio de autonomía; si el paciente lo solicita.",
+                    "Principio de beneficencia; cuando mejore la calidad de vida.",
+                    "Principio de no maleficencia; cuando sea necesario para optimizar la atención sanitaria.",
+                    "Principio de justicia; por el bien común."
+                ],
+                correct: 2 // C (Según el texto de la pregunta proporcionado)
+            },
+            {
+                source: "PÁGINA 7",
+                question: "¿Qué obligación ética persiste para las enfermeras y enfermeros incluso tras la muerte del paciente?",
+                options: [
+                    "Garantizar la continuidad de los cuidados clínicos.",
+                    "Mantener la dignidad del paciente y de su familia en el recuerdo.",
+                    "Informar públicamente sobre las causas de la muerte.",
+                    "Compartir los datos clínicos con fines de investigación científica."
+                ],
+                correct: 1 // B
+            },
+            // PÁGINA 8
+            {
+                source: "PÁGINA 8",
+                question: "¿Qué principio deontológico se ve en tensión en los casos de conflicto entre secreto y bien público?",
+                options: [
+                    "Autonomía frente a la justicia.",
+                    "Beneficencia frente a confidencialidad.",
+                    "Veracidad frente a fidelidad institucional.",
+                    "Justicia frente a beneficencia."
+                ],
+                correct: 1 // B (Según opciones proporcionadas)
+            },
+            // PÁGINA 9
+            {
+                source: "PÁGINA 9",
+                question: "¿Que ley reconoce a los pacientes su capacidad para conocer toda la información disponible sobre su salud?",
+                options: [
+                    "Ley 41/2002 (ley de autonomía del paciente)",
+                    "Ley general de salud pública",
+                    "Ley de cohesión y calidad del SNS",
+                    "Ley orgánica 15/1999"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "PÁGINA 9",
+                question: "La información sanitaria, como regla general, debe proporcionarse:",
+                options: [
+                    "Por escrito y con testigos",
+                    "De forma verbal, dejando constancia en la Historia Clínica",
+                    "Solo mediante documentos legales",
+                    "Exclusivamente a familiares más cercanos"
+                ],
+                correct: 1 // B
+            },
+            // PÁGINA 10
+            {
+                source: "PÁGINA 10",
+                question: "¿Qué se entiende por estado de necesidad terapéutica?",
+                options: [
+                    "Derecho a no recibir tratamiento.",
+                    "Obligación de informar siempre.",
+                    "Actuar sin informar previamente si conocer la situación puede causar daño grave.",
+                    "Autorización para informar a la familia."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 10",
+                question: "Los motivos por lo que se quiere acceder a la Historia Clínica son dos principalmente:",
+                options: [
+                    "Razones clínicas.",
+                    "Razones jurídicas.",
+                    "Razones educativas.",
+                    "A y B son correctas."
+                ],
+                correct: 3 // D
+            },
+            // PÁGINA 11
+            {
+                source: "PÁGINA 11",
+                question: "Según el Código Deontológico, si el paciente no está preparado para recibir la información, la enfermera debe:",
+                options: [
+                    "Omitir la información por completo.",
+                    "Informar solo al médico responsable.",
+                    "Dirigirse a los familiares o allegados.",
+                    "Entregar la información por escrito al paciente."
+                ],
+                correct: 2 // C
+            },
+            // PÁGINA 12
+            {
+                source: "PÁGINA 12",
+                question: "Según el Art 2 de la Ley 41/2002, ¿cuál es uno de los principios básicos sobre la información clínica?",
+                options: [
+                    "Principio de la no discriminación económica.",
+                    "Principio de la autonomía de la voluntad.",
+                    "Principio de la necesidad terapéutica (como exención total).",
+                    "Principio de la superioridad técnica."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "PÁGINA 12",
+                question: "¿Quién tiene la responsabilidad principal de informar al paciente según la Ley de Autonomía del Paciente?",
+                options: [
+                    "Todo el equipo sanitario en conjunto.",
+                    "El médico responsable, que coordina la información.",
+                    "El profesional que realiza el procedimiento.",
+                    "El personal de enfermería por su contacto directo."
+                ],
+                correct: 1 // B
+            },
+            // PÁGINA 13
+            {
+                source: "PÁGINA 13",
+                question: "¿El paciente puede revocar su consentimiento?",
+                options: [
+                    "Solo antes de iniciar el tratamiento",
+                    "Únicamente con autorización judicial",
+                    "Libremente y por escrito en cualquier momento",
+                    "Si lo autoriza el médico responsable"
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 13",
+                question: "Antes de la firma del consentimiento informado, se debe informar sobre:",
+                options: [
+                    "Los beneficios económicos.",
+                    "Solo los riesgos generales.",
+                    "Consecuencias relevantes, riesgos personales/probables y contraindicaciones.",
+                    "Política de privacidad."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 13",
+                question: "¿Quién debe valorar la necesidad del consentimiento escrito según la Ley?",
+                options: [
+                    "Solo el médico.",
+                    "El paciente.",
+                    "El profesional sanitario que realice la actuación.",
+                    "El centro hospitalario."
+                ],
+                correct: 0 // A (Aunque a menudo es compartido, la ley enfatiza al médico responsable)
+            },
+            // PÁGINA 14
+            {
+                source: "PÁGINA 14",
+                question: "¿En qué caso puede realizarse una intervención sin el consentimiento del paciente?",
+                options: [
+                    "Cuando el paciente no comprende bien.",
+                    "Cuando el médico lo decida sin justificación.",
+                    "Riesgo inmediato y grave para la integridad y no es posible obtener autorización.",
+                    "Cuando no tenga familiares presentes."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 14",
+                question: "¿Qué medida puede adoptarse en casos de riesgo para la salud pública?",
+                options: [
+                    "Recomendación de aislamiento voluntario.",
+                    "Suspensión de derechos civiles.",
+                    "Control de enfermos, contactos y medio ambiente.",
+                    "Alta médica inmediata."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 14",
+                question: "Según la Ley Orgánica 3/1986, las autoridades pueden adoptar medidas especiales cuando:",
+                options: [
+                    "Lo solicite el paciente.",
+                    "Existan razones sanitarias de urgencia o necesidad (salud pública).",
+                    "El médico quiera mejorar la atención.",
+                    "Emergencia interna del hospital."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "PÁGINA 14",
+                question: "¿Qué ocurre cuando un paciente manifiesta expresamente su deseo de no ser informado?",
+                options: [
+                    "Se le informa igualmente.",
+                    "No se le informa ni se pide consentimiento.",
+                    "Se respeta su voluntad (renuncia documental) pero se necesita su consentimiento para intervenir.",
+                    "El médico decide unilateralmente."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 14",
+                question: "¿Qué afirmación sobre el consentimiento es correcta según el Convenio de Oviedo?",
+                options: [
+                    "Puede ser sustituido por el médico.",
+                    "Solo exigible en cirugía.",
+                    "Debe ser libre, informado y revocable en cualquier momento.",
+                    "Limitado a centros públicos."
+                ],
+                correct: 2 // C
+            },
+            // PÁGINA 15
+            {
+                source: "PÁGINA 15",
+                question: "Según la LAP, el consentimiento por representación debe:",
+                options: [
+                    "Otorgarse siempre por el médico.",
+                    "Darse solo en urgencias.",
+                    "Ser adecuado a las circunstancias y proporcional, respetando la dignidad.",
+                    "Ser firmado por dos testigos."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 15",
+                question: "En el caso de un paciente incapacitado legalmente, el consentimiento lo prestará:",
+                options: [
+                    "El médico responsable.",
+                    "El trabajador social.",
+                    "Su representante legal.",
+                    "El familiar de mayor edad."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 15",
+                question: "El “estado de necesidad” permite intervenir sin consentimiento cuando:",
+                options: [
+                    "Se niega por motivos religiosos.",
+                    "Beneficia a la sociedad.",
+                    "Riesgo inmediato y grave y no se puede obtener consentimiento.",
+                    "El representante no acude."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 15",
+                question: "El consentimiento informado constituye:",
+                options: [
+                    "Un trámite administrativo opcional.",
+                    "Una mera formalidad.",
+                    "Un derecho del paciente y una obligación legal.",
+                    "Documento exclusivo para cirugía compleja."
+                ],
+                correct: 2 // C
+            },
+            // PÁGINA 16
+            {
+                source: "PÁGINA 16",
+                question: "Si un paciente no puede dar consentimiento (Art 8), ¿a quién debe buscar la enfermera?",
+                options: [
+                    "La autoridad sanitaria.",
+                    "Compañeros de trabajo.",
+                    "Médico de turno.",
+                    "Familiares o allegados."
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "PÁGINA 16",
+                question: "Según el Art 9, ¿qué medidas tiene PROHIBIDO la enfermera para obtener consentimiento?",
+                options: [
+                    "Persuasión verbal.",
+                    "Investigación experimental.",
+                    "Medidas de fuerza física o moral.",
+                    "Medidas económicas."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "PÁGINA 16",
+                question: "¿Quién tiene la responsabilidad principal de informar al paciente?",
+                options: [
+                    "Todo el equipo.",
+                    "El médico responsable.",
+                    "El profesional que realiza el procedimiento.",
+                    "Enfermería."
+                ],
+                correct: 1 // B
+            },
+            // CÓDIGO DEONTOLÓGICO Y CIE
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Qué es un código deontológico?",
+                options: [
+                    "Un documento legal del Estado que regula todas las profesiones sanitarias",
+                    "Conjunto de normas éticas y morales asumidas por un colectivo profesional",
+                    "Un reglamento interno de los hospitales",
+                    "Una guía científica de práctica clínica"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿A quién se atribuye el primer código de carácter moral y ético relacionado con la práctica sanitaria?",
+                options: [
+                    "Hipócrates",
+                    "Florence Nightingale",
+                    "Hammurabi",
+                    "Consejo Internacional de Enfermería"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Qué documento se considera la primera declaración de deberes profesionales de las enfermeras?",
+                options: [
+                    "Código Ético del CIE",
+                    "Juramento Florence Nightingale (1893)",
+                    "Constitución de la ANA",
+                    "Código de Hammurabi"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿En qué año promulgó el CIE su primer código para enfermeras?",
+                options: [
+                    "1897",
+                    "1989",
+                    "2021",
+                    "1953"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuál fue el año en que se aprobó el Código Deontológico de la Enfermería Española?",
+                options: [
+                    "1953",
+                    "1989",
+                    "1997",
+                    "2001"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuántos artículos componen el Código Deontológico de la Enfermería Española?",
+                options: [
+                    "50 artículos",
+                    "84 artículos más uno final",
+                    "100 artículos",
+                    "70 artículos"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuántos capítulos incluye el Código Deontológico de la Enfermería Española?",
+                options: [
+                    "10 capítulos",
+                    "12 capítulos",
+                    "13 capítulos",
+                    "15 capítulos"
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El Capítulo II del Código Deontológico trata sobre:",
+                options: [
+                    "La enfermería y el ser humano, deberes de los enfermeros",
+                    "La promoción de la salud",
+                    "Los derechos de los enfermos",
+                    "Normas comunes del ejercicio profesional"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Qué capítulo aborda el derecho del niño a crecer en salud y dignidad?",
+                options: [
+                    "Capítulo IV",
+                    "Capítulo VII",
+                    "Capítulo VIII",
+                    "Capítulo IX"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El Capítulo X del Código Deontológico trata sobre:",
+                options: [
+                    "La relación de la enfermería con los ancianos",
+                    "La enfermería ante la sociedad",
+                    "Normas comunes en el ejercicio de la profesión",
+                    "Promoción de la salud y bienestar social"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El capítulo XI del Código Deontológico habla sobre:",
+                options: [
+                    "Las preocupaciones sobre el paciente de la enfermería",
+                    "La educación y la investigación de la enfermería",
+                    "La seguridad laboral",
+                    "Las medidas de prevención de contagio"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El capítulo XII del Código Deontológico trata sobre:",
+                options: [
+                    "Condiciones de trabajo",
+                    "Gestión de casos complejos",
+                    "Reparto de pacientes entre enfermeros",
+                    "La educación sanitaria que debemos proporcionar a los pacientes"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El consejo general obliga a:",
+                options: [
+                    "Respetar el código deontológico por encima de todas las cosas",
+                    "No modificar bajo ningún concepto el código deontológico",
+                    "Usar el código deontológico como guía opcional para la práctica enfermera",
+                    "Mantener al día el contenido de este código deontológico"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "El CIE adoptó por primera vez un Código internacional de ética para enfermeras en:",
+                options: [
+                    "1953",
+                    "1962",
+                    "1945",
+                    "1975"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "Según el Código Deontológico del CIE, ¿cuál de las siguientes no es uno de los cuatro deberes fundamentales de las enfermeras?",
+                options: [
+                    "Gestionar recursos sanitarios",
+                    "Prevenir la enfermedad",
+                    "Promover la salud",
+                    "Restaurar la salud"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuántos elementos tiene el Código deontológico del CIE que ponen de relieve las normas de conducta ética?",
+                options: [
+                    "3",
+                    "4",
+                    "8",
+                    "6"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuál es uno de los elementos que tiene el Código Deontológico del CIE que ponen de relieve las normas de conducta ética? (1)",
+                options: [
+                    "La población sanitaria",
+                    "La zona de salud",
+                    "La enfermera y las personas",
+                    "La enfermera y su vestimenta"
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuál es uno de los elementos que tiene el Código Deontológico del CIE que ponen de relieve las normas de conducta ética? (2)",
+                options: [
+                    "La enfermera y sus deberes",
+                    "Los pacientes oncológicos",
+                    "Todo el personal sanitario",
+                    "La enfermera y la práctica"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuál es uno de los elementos que tiene el Código Deontológico del CIE que ponen de relieve las normas de conducta ética? (3)",
+                options: [
+                    "La enfermera y la profesión",
+                    "La enfermera y el trato con sus compañeros",
+                    "La relación médico-enfermero",
+                    "La relación paciente-enfermero"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "CÓDIGO DEONTOLÓGICO",
+                question: "¿Cuál es uno de los elementos que tiene el Código Deontológico del CIE que ponen de relieve las normas de conducta ética? (4)",
+                options: [
+                    "La enfermera y la higiene",
+                    "La comunicación con los demás servicios",
+                    "La enfermera y la salud global",
+                    "La enfermera y los cuidados"
+                ],
+                correct: 2 // C
+            },
+            // RESPONSABILIDAD Y LEGISLACIÓN (NUEVAS PREGUNTAS)
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Qué despierta en los usuarios expectativa de curación, mejoría o supervivencia?",
+                options: [
+                    "El aumento del número de actos profesionales",
+                    "La difusión de los avances científicos y tecnológicos",
+                    "La relación profesional sanitario-paciente",
+                    "Todas son correctas"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuál de las siguientes opciones define mejor el concepto general de responsabilidad?",
+                options: [
+                    "La capacidad de actuar sin consecuencias legales ni morales.",
+                    "La cualidad de responder únicamente por errores involuntarios.",
+                    "La obligación de reparar o satisfacer las consecuencias de un acto propio o ajeno.",
+                    "La ausencia de obligación ante un hecho realizado libremente"
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuál de los siguientes elementos NO forma parte de los requisitos para que exista responsabilidad extracontractual según el art. 1902 del Código Civil?",
+                options: [
+                    "La existencia de una acción u omisión culposa o negligente",
+                    "La existencia de un contrato previo entre las partes",
+                    "La existencia de un daño o lesión a un tercero",
+                    "La relación de causalidad entre la conducta y el daño"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "Cuál de estas circunstancias es agravante:",
+                options: [
+                    "Legítima defensa",
+                    "Confesión",
+                    "Cumplimiento el deber",
+                    "Abuso de autoridad"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuál de las siguientes es una forma de solventar la deuda por responsabilidad penal?",
+                options: [
+                    "Solo mediante sanciones administrativas.",
+                    "Únicamente a través de multas.",
+                    "Mediante prisión, inhabilitación y multa.",
+                    "Mediante trabajos en beneficio de la comunidad exclusivamente."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuándo se considera a un sujeto culpable?",
+                options: [
+                    "Cuando reúne características a las que le está señalada una pena.",
+                    "Cuando pudo haber actuado de otra manera a como lo hizo.",
+                    "Cuando ignora las reglas de la profesión por falta de conocimientos.",
+                    "Cuando su conducta supone una infracción del deber."
+                ],
+                correct: 3 // D (Según la pregunta: 'conducta supone infracción del deber' es la definición clásica de culpabilidad normativa)
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Por qué aumenta la jurisprudencia en relación a la responsabilidad médica?",
+                options: [
+                    "Porque han disminuido los métodos diagnósticos invasivos.",
+                    "Porque la profesión sanitaria es cada vez menos compleja.",
+                    "Porque aumentan los procedimientos de alto riesgo, junto con una mayor exigencia de la población.",
+                    "Porque los profesionales sanitarios cuentan con menos información."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "Cuando hablamos de responsabilidad profesional, nos referimos a:",
+                options: [
+                    "La obligación de trabajar sin cometer errores.",
+                    "La aplicación de las definiciones de responsabilidad al ámbito de una profesión.",
+                    "La capacidad de evitar las consecuencias legales de la práctica profesional.",
+                    "La exención moral ante decisiones legales"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "El proceso civil podrá basarse en:",
+                options: [
+                    "Responsabilidad contractual por incumplimiento negligente del contrato de servicios",
+                    "Responsabilidad extracontractual si la relación se ha basado en un contrato",
+                    "No se puede basar ni en la responsabilidad contractual ni en la extracontractual",
+                    "Ninguna respuesta es correcta"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Qué es la responsabilidad deontológica?",
+                options: [
+                    "La obligación de cumplir únicamente con las normas legales del Estado.",
+                    "La obligación de responder de los propios actos desde una perspectiva moral ante los Colegios Profesionales.",
+                    "La responsabilidad que se asume únicamente por causar daños materiales.",
+                    "La obligación de responder solo ante los tribunales."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Quién es el que está obligado a cumplir e intencionadamente no lo hace?",
+                options: [
+                    "Dolo (Dolor en texto original)",
+                    "Culpa",
+                    "Morosidad",
+                    "Todas son correctas"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Por qué la prestación de servicios sanitarios no se considera un contrato típico entre el profesional y el paciente?",
+                options: [
+                    "Porque el paciente no tiene derecho a recibir asistencia sanitaria.",
+                    "Porque el derecho proviene de otros títulos (SS, seguros) y no de un contrato directo.",
+                    "Porque el profesional no tiene obligación legal de atender.",
+                    "Porque la relación es únicamente bilateral."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Qué caracteriza principalmente a la imprudencia profesional?",
+                options: [
+                    "El uso voluntario de técnicas innovadoras sin autorización.",
+                    "La falta de actualización, ignorancia o inhabilidad que vulnera la lex artis.",
+                    "La realización de actividades profesionales fuera del lugar de trabajo.",
+                    "La negativa a seguir instrucciones."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿En qué consiste la responsabilidad administrativa para un profesional sanitario?",
+                options: [
+                    "En responder penalmente por causar un daño físico.",
+                    "En asumir consecuencias civiles por perjuicio económico.",
+                    "En poder verse implicado en un proceso derivado del ejercicio de sus funciones dentro de la Administración.",
+                    "En afrontar sanciones únicamente por incumplir códigos éticos."
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿En que se basa la responsabilidad extracontractual?",
+                options: [
+                    "La relación profesional-paciente tiene de base un contrato.",
+                    "La relación profesional-paciente no se basa en un contrato.",
+                    "Solo aplica en tratamientos experimentales.",
+                    "Solo existe si es daño fue intencional"
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuál de las siguientes es una circunstancia eximente de responsabilidad penal?",
+                options: [
+                    "Alevosía",
+                    "Arrebato u obcecación",
+                    "Trastorno psíquico",
+                    "Abuso de confianza"
+                ],
+                correct: 2 // C
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Cuál de las siguientes opciones se considera una circunstancia atenuante según el Código Penal?",
+                options: [
+                    "Precio, recompensa o promesa",
+                    "Ensañamiento",
+                    "Reincidencia",
+                    "Confesión"
+                ],
+                correct: 3 // D
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "Según el proceso penal, ¿cómo suele iniciarse habitualmente?",
+                options: [
+                    "Por denuncia o querella del paciente",
+                    "Por mandato del juez sin necesidad de denuncia",
+                    "Únicamente por la policía",
+                    "Solo por informe pericial previo"
+                ],
+                correct: 0 // A
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Qué requisitos deben cumplirse para que exista imprudencia profesional?",
+                options: [
+                    "Actuar con intención de hacer daño.",
+                    "Actuar sin cuidado, causar daño real consecuencia de la acción, sin mala intención.",
+                    "No causar ningún daño.",
+                    "Actuar siempre de forma correcta."
+                ],
+                correct: 1 // B
+            },
+            {
+                source: "RESPONSABILIDAD PROFESIONAL",
+                question: "¿Qué significa la culpabilidad dentro del ámbito jurídico?",
+                options: [
+                    "Que la persona actuó correctamente según la ley.",
+                    "Que la acción puede atribuirse al sujeto porque pudo haber actuado de acuerdo con el derecho, pero no lo hizo.",
+                    "Que siempre existe intención de causar daño.",
+                    "Que la conducta no puede ser sancionada."
+                ],
+                correct: 1 // B
+            }
+        ];
+
+        // Estado de la aplicación
+        let currentQuestionIndex = 0;
+        let score = { correct: 0, incorrect: 0 };
+        let isAnswered = false;
+
+        // Referencias al DOM
+        const ui = {
+            questionText: document.getElementById('question-text'),
+            questionSource: document.getElementById('question-source'),
+            optionsContainer: document.getElementById('options-container'),
+            scoreCorrect: document.getElementById('score-correct'),
+            scoreIncorrect: document.getElementById('score-incorrect'),
+            questionsLeft: document.getElementById('questions-left'),
+            progressBar: document.getElementById('progress-bar'),
+            feedbackArea: document.getElementById('feedback-area'),
+            feedbackMessage: document.getElementById('feedback-message'),
+            quizScreen: document.getElementById('quiz-screen'),
+            resultScreen: document.getElementById('result-screen'),
+            finalCorrect: document.getElementById('final-correct'),
+            finalIncorrect: document.getElementById('final-incorrect'),
+            finalScore: document.getElementById('final-score')
+        };
+
+        function initQuiz() {
+            currentQuestionIndex = 0;
+            score = { correct: 0, incorrect: 0 };
+            isAnswered = false;
+            
+            ui.quizScreen.classList.remove('hidden');
+            ui.resultScreen.classList.add('hidden');
+            
+            updateScoreBoard();
+            loadQuestion();
+        }
+
+        function updateScoreBoard() {
+            ui.scoreCorrect.textContent = score.correct;
+            ui.scoreIncorrect.textContent = score.incorrect;
+            ui.questionsLeft.textContent = questionsDB.length - currentQuestionIndex;
+            
+            const progress = (currentQuestionIndex / questionsDB.length) * 100;
+            ui.progressBar.style.width = `${progress}%`;
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            ui.feedbackArea.classList.add('hidden');
+            ui.optionsContainer.innerHTML = ''; // Limpiar opciones anteriores
+
+            const q = questionsDB[currentQuestionIndex];
+            
+            // Animación de entrada texto
+            ui.questionText.classList.remove('fade-in');
+            void ui.questionText.offsetWidth; // Trigger reflow
+            ui.questionText.classList.add('fade-in');
+
+            ui.questionSource.textContent = q.source;
+            ui.questionText.textContent = q.question;
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full text-left p-4 rounded-xl border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm sm:text-base font-medium transition-all shadow-sm`;
+                btn.innerHTML = `<span class="font-bold text-blue-400 mr-2">${String.fromCharCode(65 + index)}</span> ${opt}`;
+                btn.onclick = () => checkAnswer(index, btn);
+                ui.optionsContainer.appendChild(btn);
+            });
+
+            updateScoreBoard();
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const q = questionsDB[currentQuestionIndex];
+            const buttons = ui.optionsContainer.querySelectorAll('button');
+            const isCorrect = selectedIndex === q.correct;
+
+            // Deshabilitar todos los botones
+            buttons.forEach(btn => btn.disabled = true);
+            buttons.forEach(btn => btn.classList.add('disabled'));
+
+            // Estilar botones
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                score.correct++;
+                showFeedback(true, "¡Correcto! Bien hecho.");
+            } else {
+                btnElement.classList.add('incorrect');
+                // Mostrar cuál era la correcta
+                buttons[q.correct].classList.add('correct');
+                score.incorrect++;
+                showFeedback(false, "Incorrecto. La respuesta correcta está marcada en verde.");
+            }
+
+            updateScoreBoard();
+        }
+
+        function showFeedback(isSuccess, message) {
+            ui.feedbackArea.classList.remove('hidden');
+            ui.feedbackMessage.className = `p-4 rounded-lg border text-center font-medium fade-in ${
+                isSuccess 
+                ? 'bg-green-900/30 border-green-600 text-green-200' 
+                : 'bg-red-900/30 border-red-600 text-red-200'
+            }`;
+            ui.feedbackMessage.textContent = message;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questionsDB.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            ui.quizScreen.classList.add('hidden');
+            ui.resultScreen.classList.remove('hidden');
+            
+            // Llenar datos finales
+            ui.finalCorrect.textContent = score.correct;
+            ui.finalIncorrect.textContent = score.incorrect;
+            
+            // Calcular nota sobre 10
+            const finalNote = ((score.correct / questionsDB.length) * 10).toFixed(1);
+            ui.finalScore.textContent = finalNote;
+            
+            ui.progressBar.style.width = '100%';
+            ui.questionsLeft.textContent = '0';
+        }
+
+        function restartQuiz() {
+            initQuiz();
+        }
+
+        // Iniciar al cargar
+        initQuiz();
+
+    </script>
+</body>
+</html>
